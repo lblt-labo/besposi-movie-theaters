@@ -41,7 +41,8 @@ textarea{min-height:88px}
 .btn.sub2{background:#2a2318;color:#f5f1e8;border:2px solid #8a7a58;margin-top:.5rem}
 .card{background:#1f1a12;border:2px solid #5a4a2e;border-left:8px solid #f2c14e;border-radius:12px;padding:.7rem .9rem;margin-bottom:.7rem}
 .card h3{margin:0;font-size:1rem}.seat{font-size:1.3rem;font-weight:800;color:#f2c14e}
-.tag{display:inline-block;border:1px solid #f2c14e;border-radius:12px;padding:0 .6rem;font-size:.75rem;margin:.2rem 0}
+.tag{display:inline-block;border:1px solid #f2c14e;border-radius:12px;padding:0 .6rem;font-size:.75rem;margin:.2rem .3rem .2rem 0}
+.tag.fmt{border-style:dashed;border-color:#cfc6b0}
 .memo{font-size:.85rem;white-space:pre-wrap;word-break:break-word}
 .acts{display:flex;gap:.5rem;margin-top:.4rem}.acts button{flex:1;min-height:44px;border-radius:8px;border:2px solid #8a7a58;background:#2a2318;cursor:pointer}
 .empty{text-align:center;color:#cfc6b0;padding:2rem 0}
@@ -68,12 +69,16 @@ textarea{min-height:88px}
 <section id="secAdd" class="ticket">
 <label for="region">地域</label><select id="region"></select>
 <label for="theater">劇場</label><select id="theater"></select>
+<p class="hint">リストにない劇場は「✏ 劇場名を手入力する」から追加できます。</p>
 <div id="manualBox" hidden><label for="manual">✏ 劇場名を手入力（ミニシアターなど）</label><input type="text" id="manual" maxlength="40" placeholder="例：ユーロスペース"></div>
 <button type="button" class="chip" id="delTh" hidden style="margin-top:.5rem">🗑 この手入力履歴を削除</button>
-<label for="screen">スクリーン</label>
-<input type="text" id="screen" list="screenList" maxlength="20" autocomplete="off" placeholder="例：1 / A / IMAX（空欄でもOK）">
+<label for="screen">スクリーン名（番号・アルファベット）</label>
+<input type="text" id="screen" list="screenList" maxlength="10" autocomplete="off" placeholder="例：1 / 2 / A / B（空欄でもOK）">
 <datalist id="screenList"></datalist>
-<p class="hint">数字・アルファベット・名称など自由に入力できます。タップで候補も出ます。</p>
+<label>🎞 上映フォーマット / スクリーン特性（任意）</label>
+<div class="chips" id="fmts"></div>
+<div class="row2" style="margin-top:.5rem"><input type="text" id="newFmt" maxlength="20" placeholder="独自のフォーマットを追加" aria-label="独自フォーマット"><button class="chip" id="addFmt" style="flex:none">＋追加</button></div>
+<p class="hint">もう一度タップすると選択を解除できます。</p>
 <label>シチュエーション</label><div class="chips" id="chips"></div>
 <div class="row2" style="margin-top:.5rem"><input type="text" id="newSit" maxlength="20" placeholder="独自シチュエーションを追加" aria-label="独自シチュエーション"><button class="chip" id="addSit" style="flex:none">＋追加</button></div>
 <div class="row2"><div><label for="row">列</label><select id="row"></select></div><div><label for="num">番号</label><select id="num"></select></div></div>
@@ -82,15 +87,17 @@ textarea{min-height:88px}
 <button class="btn sub2" id="cancel" hidden>編集をやめる</button>
 </section>
 <section id="secList" hidden>
-<input type="search" id="q" placeholder="🔍 劇場名・スクリーン・メモで検索" aria-label="検索">
+<input type="search" id="q" placeholder="🔍 劇場名・スクリーン・フォーマット・メモで検索" aria-label="検索">
 <label for="fsit">シチュエーションで絞り込み</label><select id="fsit"></select>
 <div id="list" style="margin-top:.8rem"></div>
 </section>
 </main>
 
 <div class="modal" id="mHelp"><div class="box"><h2>使い方</h2><ol>
-<li>地域と劇場を選びます。リストにない劇場は「✏ 劇場名を手入力する」から入力でき、次回から「★」付きで選べます。</li>
-<li>スクリーンは「1」「A」「IMAX」など自由に入力できます。</li>
+<li>地方ブロックを選ぶと、都道府県ごとに劇場が並びます。前回選んだ地域は次回も自動で開きます。</li>
+<li>リストにない劇場（ミニシアターなど）は「✏ 劇場名を手入力する」から入力でき、次回から「★」付きで選べます。</li>
+<li>スクリーン名は「1」「A」など番号・アルファベットを入力します。</li>
+<li>IMAX・Dolby Cinema・4DXなどは「上映フォーマット」から選びます。独自の名前も追加できます。</li>
 <li>シチュエーション、列・番号を選び、感想は「ひとことメモ」に自由に書いて「記録」。</li>
 <li>同じ劇場でもシチュエーションごとに別のベスト席を残せます。独自シチュエーションも追加できます。</li>
 <li>「マイ・カルテ」で検索・絞り込み・編集・削除ができます。</li>
@@ -115,35 +122,76 @@ textarea{min-height:88px}
 document.addEventListener('DOMContentLoaded',function(){
 var $=function(id){return document.getElementById(id);};
 var K='besupoji_v1',MAN='__manual__';
-var S={entries:[],customTheaters:[],customSituations:[],region:'東京',passOn:false,pass:'',installDismissed:false};
+var S={entries:[],customTheaters:[],customSituations:[],customFormats:[],region:'関東',passOn:false,pass:'',installDismissed:false};
 var PRE={
-'東京':['TOHOシネマズ新宿','TOHOシネマズ日比谷','TOHOシネマズ六本木ヒルズ','TOHOシネマズ上野','新宿ピカデリー','丸の内ピカデリー','109シネマズプレミアム新宿','グランドシネマサンシャイン池袋','池袋HUMAXシネマズ','109シネマズ二子玉川','ユナイテッド・シネマ豊洲','立川シネマシティ'],
-'神奈川':['TOHOシネマズ横浜','109シネマズMM横浜','横浜ブルク13','TOHOシネマズ川崎','川崎チネチッタ','109シネマズ湘南'],
-'埼玉':['MOVIXさいたま','109シネマズ大宮','ユナイテッド・シネマ浦和','イオンシネマ浦和美園','109シネマズ菖蒲'],
-'千葉':['TOHOシネマズ船橋','TOHOシネマズ流山おおたかの森','MOVIX柏の葉','イオンシネマ幕張新都心','109シネマズ木更津'],
-'他地域':['TOHOシネマズ梅田','109シネマズ大阪エキスポシティ','ミッドランドスクエア シネマ','T・ジョイ博多']};
+'北海道・東北':[
+ ['北海道',['TOHOシネマズ札幌','ユナイテッド・シネマ札幌','札幌シネマフロンティア','イオンシネマ札幌苗穂']],
+ ['宮城',['TOHOシネマズ仙台','MOVIXあすと長町','109シネマズ富谷']],
+ ['秋田',['イオンシネマ秋田']]],
+'関東':[
+ ['東京',['TOHOシネマズ新宿','TOHOシネマズ日比谷','TOHOシネマズ六本木ヒルズ','TOHOシネマズ上野','新宿ピカデリー','丸の内ピカデリー','109シネマズプレミアム新宿','グランドシネマサンシャイン池袋','池袋HUMAXシネマズ','109シネマズ二子玉川','ユナイテッド・シネマ豊洲','立川シネマシティ']],
+ ['神奈川',['TOHOシネマズ横浜','109シネマズMM横浜','横浜ブルク13','TOHOシネマズ川崎','川崎チネチッタ','109シネマズ湘南']],
+ ['埼玉',['MOVIXさいたま','109シネマズ大宮','ユナイテッド・シネマ浦和','イオンシネマ浦和美園','109シネマズ菖蒲']],
+ ['千葉',['TOHOシネマズ船橋','TOHOシネマズ流山おおたかの森','MOVIX柏の葉','イオンシネマ幕張新都心','109シネマズ木更津']],
+ ['茨城',['MOVIXつくば','TOHOシネマズ水戸内原']],
+ ['栃木',['MOVIX宇都宮','TOHOシネマズ宇都宮']],
+ ['群馬',['MOVIX伊勢崎','イオンシネマ高崎']]],
+'中部':[
+ ['愛知',['ミッドランドスクエア シネマ','TOHOシネマズ名古屋ベイシティ','109シネマズ名古屋','TOHOシネマズ岡崎']],
+ ['新潟',['T・ジョイ新潟万代','ユナイテッド・シネマ新潟']],
+ ['石川',['TOHOシネマズ金沢','ユナイテッド・シネマ金沢']],
+ ['富山',['TOHOシネマズ高岡']],
+ ['静岡',['TOHOシネマズ浜松','シネシティザート']]],
+'関西':[
+ ['大阪',['TOHOシネマズ梅田','梅田ブルク7','TOHOシネマズなんば','あべのアポロシネマ','109シネマズ大阪エキスポシティ','大阪ステーションシティシネマ']],
+ ['京都',['T・ジョイ京都','109シネマズ京都','京都シネマ']],
+ ['兵庫',['109シネマズHAT神戸','OSシネマズミント神戸','TOHOシネマズ西宮OS']],
+ ['奈良',['ユナイテッド・シネマ橿原']]],
+'中国・四国':[
+ ['広島',['TOHOシネマズ緑井','広島バルト11','サロンシネマ']],
+ ['岡山',['TOHOシネマズ岡南','イオンシネマ岡山']],
+ ['香川',['TOHOシネマズ高松']],
+ ['愛媛',['シネマサンシャイン衣山']]],
+'九州・沖縄':[
+ ['福岡',['T・ジョイ博多','TOHOシネマズ天神','ユナイテッド・シネマ・キャナルシティ13','KBCシネマ']],
+ ['熊本',['TOHOシネマズ光の森','109シネマズ熊本']],
+ ['大分',['TOHOシネマズ大分わさだ']],
+ ['鹿児島',['TOHOシネマズ与次郎']],
+ ['沖縄',['ユナイテッド・シネマ那覇','TOHOシネマズ那覇メインプレイス']]]};
 var REG=Object.keys(PRE);
 var SIT=['🔥 迫力・大作重視','🎭 ドラマ・没入重視','🧘 1人でじっくり','👫 友達・パートナーと','👨‍👩‍👧 家族連れ・子供と','🛋 長時間の作品 / 安心重視'];
-var SCR=['IMAX','4DX','ScreenX','Dolby Cinema','MX4D','A','B','C','D'];
-var cur='',editId=null,dp=null;
+var FMT=['通常','IMAX','Dolby Cinema','4DX','MX4D','ScreenX'];
+var LET=['A','B','C','D','E','F','G','H'];
+var cur='',curFmt='',editId=null,dp=null;
+
+function flat(r){var a=[];(PRE[r]||[]).forEach(function(g){a=a.concat(g[1]);});return a;}
+function findRegion(th){for(var i=0;i<REG.length;i++){if(flat(REG[i]).indexOf(th)>=0)return REG[i];}return '';}
+function normRegion(r){return REG.indexOf(r)>=0?r:'関東';}
 
 function toast(m){try{var t=$('toast');if(!t)return;t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2000);}catch(e){}}
 function load(){try{var r=localStorage.getItem(K);if(r){var o=JSON.parse(r);if(o&&typeof o==='object'){for(var k in S){if(o[k]!==undefined)S[k]=o[k];}}}}catch(e){}
  if(!Array.isArray(S.entries))S.entries=[];if(!Array.isArray(S.customSituations))S.customSituations=[];
+ if(!Array.isArray(S.customFormats))S.customFormats=[];
  if(!Array.isArray(S.customTheaters))S.customTheaters=[];
- S.customTheaters=S.customTheaters.map(function(c){return typeof c==='string'?{n:c,r:'東京'}:c;}).filter(function(c){return c&&c.n;});
- S.entries.forEach(function(e){if(e&&e.screen==null)e.screen='';});
- if(REG.indexOf(S.region)<0)S.region='東京';}
+ S.customTheaters=S.customTheaters.map(function(c){return typeof c==='string'?{n:c,r:'関東'}:{n:c&&c.n,r:normRegion(c&&c.r)};}).filter(function(c){return c.n;});
+ S.entries=S.entries.filter(function(e){return e&&typeof e==='object';});
+ S.entries.forEach(function(e){
+  if(e.screen==null)e.screen='';e.screen=String(e.screen);if(e.fmt==null)e.fmt='';
+  FMT.forEach(function(f){if(f!=='通常'&&e.screen.toLowerCase()===f.toLowerCase()){if(!e.fmt)e.fmt=f;e.screen='';}});
+  e.region=findRegion(e.theater)||normRegion(e.region);
+ });
+ S.region=normRegion(S.region);}
 function save(){try{localStorage.setItem(K,JSON.stringify(S));return true;}catch(e){toast('⚠ 保存できませんでした');return false;}}
 function opt(sel,v,t){var o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);}
 function fill(id,arr,fn){var s=$(id);if(!s)return;s.innerHTML='';arr.forEach(function(a){opt(s,a,fn?fn(a):a);});}
 function nums(n){var a=[];for(var i=1;i<=n;i++)a.push(String(i));return a;}
 function allSit(){return SIT.concat(S.customSituations);}
+function allFmt(){return FMT.concat(S.customFormats);}
 function isCustom(n,r){return S.customTheaters.some(function(c){return c.n===n&&c.r===r;});}
 function screenList(){
  var dl=$('screenList');if(!dl)return;dl.innerHTML='';
- var seen={},arr=nums(20).concat(SCR);
- S.entries.forEach(function(e){if(e&&e.screen)arr.push(String(e.screen));});
+ var seen={},arr=nums(20).concat(LET);
+ S.entries.forEach(function(e){if(e.screen)arr.push(e.screen);});
  arr.forEach(function(v){if(seen[v])return;seen[v]=1;var o=document.createElement('option');o.value=v;dl.appendChild(o);});
 }
 
@@ -154,24 +202,29 @@ function syncMan(){
 }
 function fillTheaters(sel){
  var r=$('region').value,t=$('theater');t.innerHTML='';
- var pre=PRE[r]||[];
- pre.forEach(function(x){opt(t,x,x);});
- var cu=S.customTheaters.filter(function(c){return c.r===r&&pre.indexOf(c.n)<0;});
- cu.forEach(function(c){opt(t,c.n,'★ '+c.n);});
+ var all=flat(r);
+ (PRE[r]||[]).forEach(function(g){
+  var og=document.createElement('optgroup');og.label=g[0];t.appendChild(og);
+  g[1].forEach(function(x){opt(og,x,x);});
+ });
+ var cu=S.customTheaters.filter(function(c){return c.r===r&&all.indexOf(c.n)<0;});
+ if(cu.length){var gc=document.createElement('optgroup');gc.label='★ 手入力した劇場';t.appendChild(gc);cu.forEach(function(c){opt(gc,c.n,'★ '+c.n);});}
  opt(t,MAN,'✏ 劇場名を手入力する');
  if(sel){
-  if(pre.indexOf(sel)>=0||cu.some(function(c){return c.n===sel;})){t.value=sel;}
+  if(all.indexOf(sel)>=0||cu.some(function(c){return c.n===sel;})){t.value=sel;}
   else{t.value=MAN;$('manual').value=sel;}
  }
  syncMan();
 }
-function chips(){
- var box=$('chips');if(!box)return;box.innerHTML='';
- allSit().forEach(function(n){var b=document.createElement('button');b.type='button';b.className='chip';
-  b.setAttribute('aria-pressed',n===cur?'true':'false');b.textContent=(n===cur?'✓ ':'')+n;
-  b.onclick=function(){cur=n;chips();};box.appendChild(b);});
+function chipRow(boxId,list,getCur,setCur){
+ var box=$(boxId);if(!box)return;box.innerHTML='';
+ list.forEach(function(n){var b=document.createElement('button');b.type='button';b.className='chip';
+  var on=(n===getCur());b.setAttribute('aria-pressed',on?'true':'false');b.textContent=(on?'✓ ':'')+n;
+  b.onclick=function(){setCur(n);};box.appendChild(b);});
 }
-function resetForm(){editId=null;cur='';$('memo').value='';$('manual').value='';$('save').textContent='💾 ベスポジを記録';$('cancel').hidden=true;chips();}
+function chips(){chipRow('chips',allSit(),function(){return cur;},function(n){cur=n;chips();});}
+function fmts(){chipRow('fmts',allFmt(),function(){return curFmt;},function(n){curFmt=(curFmt===n)?'':n;fmts();});}
+function resetForm(){editId=null;cur='';curFmt='';$('memo').value='';$('manual').value='';$('save').textContent='💾 ベスポジを記録';$('cancel').hidden=true;chips();fmts();}
 function tab(a){$('secAdd').hidden=!a;$('secList').hidden=a;$('tabAdd').classList.toggle('on',a);$('tabList').classList.toggle('on',!a);if(!a)renderList();}
 
 function saveEntry(){
@@ -180,8 +233,8 @@ function saveEntry(){
   var th=(tv===MAN)?$('manual').value.trim():tv;
   if(!th){toast('劇場を選ぶか、劇場名を入力してください');return;}
   if(!cur){toast('シチュエーションを選んでください');return;}
-  if(PRE[r].indexOf(th)<0&&!isCustom(th,r))S.customTheaters.push({n:th,r:r});
-  var e={id:editId||String(Date.now()),region:r,theater:th,screen:$('screen').value.trim(),sit:cur,row:$('row').value,num:$('num').value,memo:$('memo').value.trim(),ts:Date.now()};
+  if(flat(r).indexOf(th)<0&&!isCustom(th,r))S.customTheaters.push({n:th,r:r});
+  var e={id:editId||String(Date.now()),region:r,theater:th,screen:$('screen').value.trim(),fmt:curFmt,sit:cur,row:$('row').value,num:$('num').value,memo:$('memo').value.trim(),ts:Date.now()};
   if(editId){S.entries=S.entries.map(function(x){return x.id===editId?e:x;});}else S.entries.unshift(e);
   S.region=r;
   if(save()){toast('✅ 記録しました');resetForm();fillTheaters(th);screenList();}
@@ -193,12 +246,13 @@ function renderList(){
   var q=($('q').value||'').toLowerCase(),f=$('fsit').value;
   var arr=S.entries.filter(function(e){
    if(f&&e.sit!==f)return false;
-   return !q||(e.theater+' '+(e.memo||'')+' '+e.sit+' '+e.screen).toLowerCase().indexOf(q)>=0;});
+   return !q||(e.theater+' '+(e.memo||'')+' '+e.sit+' '+e.screen+' '+(e.fmt||'')).toLowerCase().indexOf(q)>=0;});
   if(!arr.length){var p=document.createElement('p');p.className='empty';p.textContent=S.entries.length?'🔍 見つかりませんでした':'🎟 まだ記録がありません';box.appendChild(p);return;}
   arr.forEach(function(e){
    var c=document.createElement('div');c.className='card';
    var h=document.createElement('h3');h.textContent='🎬 '+e.theater+(e.screen?'　スクリーン '+e.screen:'');c.appendChild(h);
    var t=document.createElement('span');t.className='tag';t.textContent=e.sit;c.appendChild(t);
+   if(e.fmt){var g=document.createElement('span');g.className='tag fmt';g.textContent='🎞 '+e.fmt;c.appendChild(g);}
    var s=document.createElement('div');s.className='seat';s.textContent='💺 '+e.row+'列 '+e.num+'番';c.appendChild(s);
    if(e.memo){var m=document.createElement('div');m.className='memo';m.textContent='📝 '+e.memo;c.appendChild(m);}
    var a=document.createElement('div');a.className='acts';
@@ -211,18 +265,19 @@ function renderList(){
 }
 function startEdit(e){
  editId=e.id;tab(true);
- $('region').value=REG.indexOf(e.region)>=0?e.region:'東京';
+ $('region').value=normRegion(e.region);
  fillTheaters(e.theater);
  $('screen').value=e.screen||'';$('row').value=e.row;$('num').value=e.num;$('memo').value=e.memo||'';
  if(allSit().indexOf(e.sit)<0)S.customSituations.push(e.sit);
- cur=e.sit;chips();$('save').textContent='💾 更新する';$('cancel').hidden=false;window.scrollTo(0,0);
+ if(e.fmt&&allFmt().indexOf(e.fmt)<0)S.customFormats.push(e.fmt);
+ cur=e.sit;curFmt=e.fmt||'';chips();fmts();$('save').textContent='💾 更新する';$('cancel').hidden=false;window.scrollTo(0,0);
 }
 function filterSel(){var s=$('fsit');if(!s)return;var v=s.value;s.innerHTML='';opt(s,'','すべて');allSit().forEach(function(n){opt(s,n,n);});s.value=v;}
 
 function initUI(){
  fill('region',REG);$('region').value=S.region;
  fill('row',nums(50),function(v){return v+'列';});fill('num',nums(50),function(v){return v+'番';});
- fillTheaters();chips();filterSel();screenList();
+ fillTheaters();chips();fmts();filterSel();screenList();
 }
 function bind(){
  $('region').onchange=function(){S.region=$('region').value;save();fillTheaters();};
@@ -235,6 +290,8 @@ function bind(){
  $('save').onclick=saveEntry;$('cancel').onclick=function(){resetForm();fillTheaters();};
  $('addSit').onclick=function(){var v=$('newSit').value.trim();if(!v)return;
   if(allSit().indexOf(v)<0){S.customSituations.push(v);save();}cur=v;$('newSit').value='';chips();filterSel();};
+ $('addFmt').onclick=function(){var v=$('newFmt').value.trim();if(!v)return;
+  if(allFmt().indexOf(v)<0){S.customFormats.push(v);save();}curFmt=v;$('newFmt').value='';fmts();};
  $('q').oninput=renderList;$('fsit').onchange=renderList;
  $('btnHelp').onclick=function(){$('mHelp').classList.add('show');};
  $('btnSet').onclick=function(){$('passOn').checked=!!S.passOn;$('passIn').value='';$('mSet').classList.add('show');};
