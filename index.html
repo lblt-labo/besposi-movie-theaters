@@ -38,6 +38,7 @@ textarea{min-height:88px}
 .chips{display:flex;flex-wrap:wrap;gap:.4rem}
 .chip{min-height:44px;padding:.3rem .8rem;border-radius:22px;border:2px solid #8a7a58;background:#0e0c09;cursor:pointer;font-size:.85rem}
 .chip[aria-pressed=true]{background:#f2c14e;color:#14110f;border-color:#f2c14e;font-weight:700}
+.modes .chip{flex:1;min-width:140px}
 .btn{min-height:50px;width:100%;margin-top:1rem;border:0;border-radius:12px;background:#f2c14e;color:#14110f;font-weight:800;font-size:1rem;cursor:pointer}
 .btn.sub2{background:#2a2318;color:#f5f1e8;border:2px solid #8a7a58;margin-top:.5rem}
 .card{background:#1f1a12;border:2px solid #5a4a2e;border-left:8px solid #f2c14e;border-radius:12px;padding:.7rem .9rem;margin-bottom:.7rem}
@@ -83,15 +84,16 @@ textarea{min-height:88px}
 <label>シチュエーション</label><div class="chips" id="chips"></div>
 <div class="row2" style="margin-top:.5rem"><input type="text" id="newSit" maxlength="20" placeholder="独自シチュエーションを追加" aria-label="独自シチュエーション"><button class="chip" id="addSit" style="flex:none">＋追加</button></div>
 
-<label>💺 座席の指定方法</label>
-<div class="chips"><button type="button" class="chip" id="mPin" aria-pressed="true">✓ 📍 ピンポイント</button><button type="button" class="chip" id="mRange" aria-pressed="false">🔭 このあたり（範囲）</button></div>
+<label>💺 座席の記録方法</label>
+<div class="chips modes"><button type="button" class="chip" id="mPin" aria-pressed="true">✓ 📍 ピンポイント（この1席）</button><button type="button" class="chip" id="mRange" aria-pressed="false">🗺 エリア（この辺ならOK）</button></div>
+<p class="hint" id="modeHint"></p>
 <div id="pinBox" class="row2"><div><label for="row">列</label><select id="row"></select></div><div><label for="num">番号</label><select id="num"></select></div></div>
 <div id="rangeBox" hidden>
- <label>列の範囲</label>
- <div class="rng"><select id="rf" aria-label="列の範囲 から"></select><span>〜</span><select id="rt" aria-label="列の範囲 まで"></select></div>
- <label>番号の範囲</label>
- <div class="rng"><select id="nf" aria-label="番号の範囲 から"></select><span>〜</span><select id="nt" aria-label="番号の範囲 まで"></select></div>
- <p class="hint">記憶があいまいな時用です。列だけ・番号だけの片方でもOK。片方だけ選ぶと、その1つを指定します。</p>
+ <label>列のエリア</label>
+ <div class="rng"><select id="rf" aria-label="列のエリア から"></select><span>〜</span><select id="rt" aria-label="列のエリア まで"></select></div>
+ <label>番号のエリア</label>
+ <div class="rng"><select id="nf" aria-label="番号のエリア から"></select><span>〜</span><select id="nt" aria-label="番号のエリア まで"></select></div>
+ <p class="hint">列だけ・番号だけのエリア指定でもOKです。片方だけ選ぶと、その1つを指定します。</p>
 </div>
 
 <label for="memo">📝 ひとことメモ（自由記述）</label><textarea id="memo" maxlength="300" placeholder="例：前すぎず首が楽。音が真ん中に集まる。通路が近くて出入りしやすい。"></textarea>
@@ -110,9 +112,11 @@ textarea{min-height:88px}
 <li>リストにない劇場（ミニシアターなど）は「✏ 劇場名を手入力する」から入力でき、次回から「★」付きで選べます。</li>
 <li>スクリーン名は「1」「A」など番号・アルファベットを入力します。</li>
 <li>IMAX・Dolby Cinema・4DXなどは「上映フォーマット」から選びます。独自の名前も追加できます。</li>
-<li>座席は「ピンポイント」で列・番号を選ぶか、記憶があいまいな時は「このあたり（範囲）」で大まかな範囲を選びます。</li>
-<li>感想やニュアンスは「ひとことメモ」に自由に書けます。範囲指定と一緒に残せます。</li>
-<li>同じ劇場でもシチュエーションごとに別のベスト席を残せます。独自シチュエーションも追加できます。</li>
+<li>座席は2つの方法から、その時の気分や目的に合わせて選べます。
+ <br>📍 <b>ピンポイント</b>：「この1席！」を記録（例：G列 12番）
+ <br>🗺 <b>エリア</b>：「この辺ならどこに座っても観やすい！」というベストエリアを記録（例：H〜L列 ／ 10〜18番）</li>
+<li>感想やニュアンスは「ひとことメモ」に自由に書けます。どちらの方法とも組み合わせて残せます。</li>
+<li>同じ劇場でもシチュエーションごとに別のベスト席・ベストエリアを残せます。独自シチュエーションも追加できます。</li>
 <li>「マイ・カルテ」で検索・絞り込み・編集・削除ができます。</li>
 <li>⚙からパスコードロックのON/OFFと変更ができます（初期はオフ）。</li>
 <li>データはこの端末のブラウザ内にだけ保存されます。</li></ol>
@@ -175,15 +179,20 @@ var REG=Object.keys(PRE);
 var SIT=['🔥 迫力・大作重視','🎭 ドラマ・没入重視','🧘 1人でじっくり','👫 友達・パートナーと','👨‍👩‍👧 家族連れ・子供と','🛋 長時間の作品 / 安心重視'];
 var FMT=['通常','IMAX','Dolby Cinema','4DX','MX4D','ScreenX'];
 var LET=['A','B','C','D','E','F','G','H'];
+var NUMS=[];for(var i=1;i<=50;i++)NUMS.push(String(i));
+var ROWL=NUMS.concat('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''));
 var cur='',curFmt='',mode='pin',editId=null,dp=null;
 
 function flat(r){var a=[];(PRE[r]||[]).forEach(function(g){a=a.concat(g[1]);});return a;}
 function findRegion(th){for(var i=0;i<REG.length;i++){if(flat(REG[i]).indexOf(th)>=0)return REG[i];}return '';}
 function normRegion(r){return REG.indexOf(r)>=0?r:'関東';}
-function norm(a,b){if(!a&&!b)return ['',''];a=a||b;b=b||a;return (+a<=+b)?[a,b]:[b,a];}
-function span(a,b,u){if(!a&&!b)return '';var p=norm(a,b);return p[0]===p[1]?p[0]+u:p[0]+'〜'+p[1]+u;}
+function norm(a,b,L){if(!a&&!b)return ['',''];a=a||b;b=b||a;return (L.indexOf(a)<=L.indexOf(b))?[a,b]:[b,a];}
+function span(a,b,u,L){if(!a&&!b)return '';var p=norm(a,b,L);return p[0]===p[1]?p[0]+u:p[0]+'〜'+p[1]+u;}
 function seatText(e){
- if(e.mode==='range'){var r=span(e.rowFrom,e.rowTo,'列'),n=span(e.numFrom,e.numTo,'番');return [r,n].filter(Boolean).join(' ')+' あたり';}
+ if(e.mode==='range'){
+  var r=span(e.rowFrom,e.rowTo,'列',ROWL),n=span(e.numFrom,e.numTo,'番',NUMS);
+  return 'エリア：'+[r,n].filter(Boolean).join(' ／ ');
+ }
  return e.row+'列 '+e.num+'番';
 }
 
@@ -217,8 +226,9 @@ function screenList(){
 function setMode(m){
  mode=m;$('pinBox').hidden=(m!=='pin');$('rangeBox').hidden=(m!=='range');
  var a=$('mPin'),b=$('mRange');
- a.setAttribute('aria-pressed',m==='pin'?'true':'false');a.textContent=(m==='pin'?'✓ ':'')+'📍 ピンポイント';
- b.setAttribute('aria-pressed',m==='range'?'true':'false');b.textContent=(m==='range'?'✓ ':'')+'🔭 このあたり（範囲）';
+ a.setAttribute('aria-pressed',m==='pin'?'true':'false');a.textContent=(m==='pin'?'✓ ':'')+'📍 ピンポイント（この1席）';
+ b.setAttribute('aria-pressed',m==='range'?'true':'false');b.textContent=(m==='range'?'✓ ':'')+'🗺 エリア（この辺ならOK）';
+ $('modeHint').textContent=m==='pin'?'「この1席！」を特定して記録します。例：G列 12番':'「この辺ならどこに座っても観やすい！」というベストエリアを記録します。例：H〜L列 ／ 10〜18番';
 }
 
 function syncMan(){
@@ -262,8 +272,8 @@ function saveEntry(){
   if(!cur){toast('シチュエーションを選んでください');return;}
   var e={id:editId||String(Date.now()),region:r,theater:th,screen:$('screen').value.trim(),fmt:curFmt,sit:cur,mode:mode,memo:$('memo').value.trim(),ts:Date.now()};
   if(mode==='range'){
-   var rr=norm($('rf').value,$('rt').value),nn=norm($('nf').value,$('nt').value);
-   if(!rr[0]&&!nn[0]){toast('列か番号の範囲を選んでください');return;}
+   var rr=norm($('rf').value,$('rt').value,ROWL),nn=norm($('nf').value,$('nt').value,NUMS);
+   if(!rr[0]&&!nn[0]){toast('列か番号のエリアを選んでください');return;}
    e.rowFrom=rr[0];e.rowTo=rr[1];e.numFrom=nn[0];e.numTo=nn[1];e.row='';e.num='';
   }else{e.row=$('row').value;e.num=$('num').value;}
   if(flat(r).indexOf(th)<0&&!isCustom(th,r))S.customTheaters.push({n:th,r:r});
@@ -285,7 +295,7 @@ function renderList(){
    var h=document.createElement('h3');h.textContent='🎬 '+e.theater+(e.screen?'　スクリーン '+e.screen:'');c.appendChild(h);
    var t=document.createElement('span');t.className='tag';t.textContent=e.sit;c.appendChild(t);
    if(e.fmt){var g=document.createElement('span');g.className='tag fmt';g.textContent='🎞 '+e.fmt;c.appendChild(g);}
-   var s=document.createElement('div');s.className='seat';s.textContent=(e.mode==='range'?'🔭 ':'💺 ')+seatText(e);c.appendChild(s);
+   var s=document.createElement('div');s.className='seat';s.textContent=(e.mode==='range'?'🗺 ':'💺 ')+seatText(e);c.appendChild(s);
    if(e.memo){var m=document.createElement('div');m.className='memo';m.textContent='📝 '+e.memo;c.appendChild(m);}
    var a=document.createElement('div');a.className='acts';
    var b1=document.createElement('button');b1.textContent='✏ 編集';b1.onclick=function(){startEdit(e);};
@@ -311,10 +321,10 @@ function filterSel(){var s=$('fsit');if(!s)return;var v=s.value;s.innerHTML='';o
 
 function initUI(){
  fill('region',REG);$('region').value=S.region;
- fill('row',nums(50),function(v){return v+'列';});fill('num',nums(50),function(v){return v+'番';});
+ fill('row',ROWL,function(v){return v+'列';});fill('num',NUMS,function(v){return v+'番';});
  var rl=function(v){return v?v+'列':'指定なし';},nl=function(v){return v?v+'番':'指定なし';};
- fill('rf',[''].concat(nums(50)),rl);fill('rt',[''].concat(nums(50)),rl);
- fill('nf',[''].concat(nums(50)),nl);fill('nt',[''].concat(nums(50)),nl);
+ fill('rf',[''].concat(ROWL),rl);fill('rt',[''].concat(ROWL),rl);
+ fill('nf',[''].concat(NUMS),nl);fill('nt',[''].concat(NUMS),nl);
  fillTheaters();chips();fmts();filterSel();screenList();setMode('pin');
 }
 function bind(){
